@@ -53,7 +53,29 @@ fun MapCanvas(
     modifier: Modifier = Modifier,
 ) {
     when (provider) {
+        MapProvider.BAIDU -> BaiduCanvas(
+            targetLatitude = targetLatitude,
+            targetLongitude = targetLongitude,
+            targetZoom = targetZoom,
+            moveNonce = moveNonce,
+            onCenterChanged = onCenterChanged,
+            onFailed = onFailed,
+            mapKey = mapKey,
+            modifier = modifier,
+        )
+
         MapProvider.TENCENT -> TencentCanvas(
+            targetLatitude = targetLatitude,
+            targetLongitude = targetLongitude,
+            targetZoom = targetZoom,
+            moveNonce = moveNonce,
+            onCenterChanged = onCenterChanged,
+            onFailed = onFailed,
+            mapKey = mapKey,
+            modifier = modifier,
+        )
+
+        MapProvider.AMAP -> AmapCanvas(
             targetLatitude = targetLatitude,
             targetLongitude = targetLongitude,
             targetZoom = targetZoom,
@@ -125,3 +147,10 @@ internal fun toGcj02(latitude: Double, longitude: Double): Pair<Double, Double> 
 
 internal fun gcj02ToWgs84(latitude: Double, longitude: Double): Pair<Double, Double> =
     Coords.gcj02ToWgs84(latitude, longitude)
+
+/** Baidu's BD-09 datum, for its canvas. */
+internal fun toBd09(latitude: Double, longitude: Double): Pair<Double, Double> =
+    Coords.wgs84ToBd09(latitude, longitude)
+
+internal fun bd09ToWgs84(latitude: Double, longitude: Double): Pair<Double, Double> =
+    Coords.bd09ToWgs84(latitude, longitude)

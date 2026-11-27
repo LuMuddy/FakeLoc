@@ -61,6 +61,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import io.github.cobylinweiqi.fakeloc.R
+import io.github.cobylinweiqi.fakeloc.core.Coords
+import io.github.cobylinweiqi.fakeloc.core.Datum
 import io.github.cobylinweiqi.fakeloc.core.Geo
 import io.github.cobylinweiqi.fakeloc.core.SavedPlace
 import io.github.cobylinweiqi.fakeloc.core.SpoofConfig
@@ -96,7 +98,7 @@ fun HomeScreen(
     onPaste: (String?) -> Unit,
     onOpenMap: () -> Unit,
     onOpenSettings: () -> Unit,
-    onSaveCoordinates: (String, String) -> Unit,
+    onSaveCoordinates: (String, String, Datum) -> Unit,
     onPickSavedPlace: (SavedPlace) -> Unit,
     onTogglePin: (Double, Double) -> Unit,
     onRetryAddress: () -> Unit,
@@ -118,6 +120,11 @@ fun HomeScreen(
 
     var latitudeText by rememberSaveable { mutableStateOf("") }
     var longitudeText by rememberSaveable { mutableStateOf("") }
+    // Which datum the two typed numbers are in. Defaults to WGS-84 (what the app
+    // stores); the user flips it when pasting a pair lifted from a GCJ-02 or
+    // BD-09 source. Reset to WGS-84 after every save and after paste/GPS, both of
+    // which produce WGS-84 values.
+    var inputDatumName by rememberSaveable { mutableStateOf(Datum.WGS84.name) }
     var showModuleHelp by remember { mutableStateOf(false) }
 
     // Re-sync the editor whenever the anchor changes from the outside. Keyed on
@@ -159,11 +166,25 @@ fun HomeScreen(
             config = config,
             latitudeText = latitudeText,
             longitudeText = longitudeText,
+            datum = Datum.valueOf(inputDatumName),
+            onDatumChange = { inputDatumName = it.name },
             onLatitudeChange = { latitudeText = it },
             onLongitudeChange = { longitudeText = it },
-            onSave = { onSaveCoordinates(latitudeText, longitudeText) },
-            onPaste = { onPaste(clipboard.getText()?.text) },
-            onUseRealGps = onUseRealGps,
+            onSave = {
+                onSaveCoordinates(latitudeText, longitudeText, Datum.valueOf(inputDatumName))
+                // The stored anchor is WGS-84, and the fields re-sync to it; the
+                // datum chip has to follow or it would claim the WGS-84 text on
+                // screen is still, say, GCJ-02.
+                inputDatumName = Datum.WGS84.name
+            },
+            onPaste = {
+                inputDatumName = Datum.WGS84.name
+                onPaste(clipboard.getText()?.text)
+            },
+            onUseRealGps = {
+                inputDatumName = Datum.WGS84.name
+                onUseRealGps()
+            },
         )
 
         PlacesCard(
@@ -209,6 +230,13 @@ fun HomeScreen(
 }
 
 private val BlockSpacing = 6.dp
+
+/** Display label for a coordinate datum, used by the manual editor's chips. */
+internal fun datumLabel(datum: Datum): Int = when (datum) {
+    Datum.WGS84 -> R.string.datum_wgs84
+    Datum.GCJ02 -> R.string.datum_gcj02
+    Datum.BD09 -> R.string.datum_bd09
+}
 
 /** Anything below this is float noise, not an edit worth offering to save. */
 private const val COORD_EPSILON = 1e-7
@@ -530,11 +558,14 @@ private fun MapPickCard(onOpenMap: () -> Unit) {
  * target apps will start receiving coordinates from. Under the fields, as
  * secondary text actions, each reads as what it does.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CoordinateEditorCard(
     config: SpoofConfig,
     latitudeText: String,
     longitudeText: String,
+    datum: Datum,
+    onDatumChange: (Datum) -> Unit,
     onLatitudeChange: (String) -> Unit,
     onLongitudeChange: (String) -> Unit,
     onSave: () -> Unit,
@@ -586,6 +617,41 @@ private fun CoordinateEditorCard(
                     keyboardType = KeyboardType.Decimal,
                     imeAction = ImeAction.Done,
                 ),
+            )
+        }
+
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = stringResource(R.string.coord_datum_label),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(4.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Datum.entries.forEach { option ->
+                FilterChip(
+                    selected = option == datum,
+                    onClick = { onDatumChange(option) },
+                    label = { Text(stringResource(datumLabel(option))) },
+                    shape = RoundedCornerShape(10.dp),
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    ),
+                )
+            }
+        }
+        if (datum != Datum.WGS84 && parsable) {
+            val (wgsLat, wgsLng) = Coords.toWgs84(latitude!!, longitude!!, datum)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = stringResource(
+                    R.string.coord_datum_preview,
+                    Geo.format(wgsLat),
+                    Geo.format(wgsLng),
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
 

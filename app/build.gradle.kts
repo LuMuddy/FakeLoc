@@ -64,8 +64,11 @@ android {
         // SDK's privacy consent before building a search client. Without it an
         // otherwise valid key was refused locally (status -1, nothing on the
         // wire) and the UI could only report "no answer".
-        versionCode = 29
-        versionName = "1.17.2"
+        // 1.18.0 — multi-provider base map: Baidu + Tencent + Amap selectable in
+        // settings, plus a coordinate-system picker (WGS-84 / GCJ-02 / BD-09) on
+        // the manual coordinate editor.
+        versionCode = 30
+        versionName = "1.18.0"
 
         ndk {
             // **arm64-v8a only.** The bundled engine publishes both ARM variants,
@@ -250,6 +253,15 @@ dependencies {
     // `mapsdk.maps.model.LatLng` entirely and cannot be linked. See the note in
     // `gradle/libs.versions.toml`.
     implementation(libs.tencent.map.vector)
+
+    // Baidu and Amap renderers, re-added so the picker can offer all three base
+    // maps. The keys are still entered on the settings page and handed to each
+    // SDK at runtime (SDKInitializer.setApiKey / MapsInitializer.setApiKey);
+    // nothing is baked into the manifest.
+    implementation(libs.baidu.map)
+    implementation(libs.baidu.search)
+    implementation(libs.amap.map)
+    implementation(libs.amap.search)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

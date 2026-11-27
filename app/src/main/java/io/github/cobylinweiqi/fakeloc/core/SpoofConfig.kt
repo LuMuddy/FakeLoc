@@ -360,7 +360,9 @@ data class SpoofConfig(
      * only care whether there is something to use.
      */
     fun mapKeyValue(provider: MapProvider): String = when (provider) {
+        MapProvider.BAIDU -> mapAkBaidu
         MapProvider.TENCENT -> mapAkTencent
+        MapProvider.AMAP -> mapAkAmap
     }
 
     /**
@@ -374,7 +376,9 @@ data class SpoofConfig(
      * learn about it.
      */
     fun withMapKey(provider: MapProvider, value: String): SpoofConfig = when (provider) {
+        MapProvider.BAIDU -> copy(mapAkBaidu = value)
         MapProvider.TENCENT -> copy(mapAkTencent = value)
+        MapProvider.AMAP -> copy(mapAkAmap = value)
     }
 
     /**
@@ -386,13 +390,23 @@ data class SpoofConfig(
      * here rather than something to be filtered out.
      */
     fun mapSecretValue(provider: MapProvider): String = when (provider) {
+        // Only Tencent publishes a separate signing secret (SK). Baidu and Amap
+        // authenticate with the AK alone, so their slot is always blank — which
+        // the settings page reads as "hide the SK field".
+        MapProvider.BAIDU -> ""
         MapProvider.TENCENT -> mapSkTencent
+        MapProvider.AMAP -> ""
     }
 
     /** [this] with [provider]'s signing secret replaced by [value]. */
     fun withMapSecret(provider: MapProvider, value: String): SpoofConfig = when (provider) {
+        MapProvider.BAIDU -> this
         MapProvider.TENCENT -> copy(mapSkTencent = value)
+        MapProvider.AMAP -> this
     }
+
+    /** Whether [provider] has a signing-secret concept at all. */
+    fun hasSigningSecret(provider: MapProvider): Boolean = provider == MapProvider.TENCENT
 
     /**
      * The key to hand [provider]'s SDK, or `null` when there is nothing to hand

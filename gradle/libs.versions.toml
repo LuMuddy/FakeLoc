@@ -22,6 +22,17 @@ materialIconsExtended = "1.7.5"
 # requires re-checking that the class is present.
 tencentMap = "5.9.0"
 
+# Baidu Map (百度) and Amap (高德) — re-added so the picker can draw with any of
+# the three mainstream mainland base maps and let the user switch between them
+# on the settings page. Baidu publishes proper AARs under com.baidu.lbsyun
+# (Map pulls `base` transitively, which is where SDKInitializer / LatLng live).
+# Amap publishes a fat JAR under com.amap.api whose `lib/*.so` the Android
+# Gradle plugin does NOT package, so the arm64 slice is copied into
+# `app/src/main/jniLibs/arm64-v8a/` by hand (see the note there).
+baiduMap = "7.6.7"
+amapMap = "9.8.3"
+amapSearch = "9.7.1"
+
 junit = "4.13.2"
 androidxJunit = "1.2.1"
 espressoCore = "3.6.1"
@@ -51,6 +62,11 @@ libxposed-api = { group = "io.github.libxposed", name = "api", version.ref = "li
 libxposed-service = { group = "io.github.libxposed", name = "service", version.ref = "libxposed" }
 
 tencent-map-vector = { group = "com.tencent.map", name = "tencent-map-vector-sdk", version.ref = "tencentMap" }
+
+baidu-map = { group = "com.baidu.lbsyun", name = "BaiduMapSDK_Map", version.ref = "baiduMap" }
+baidu-search = { group = "com.baidu.lbsyun", name = "BaiduMapSDK_Search", version.ref = "baiduMap" }
+amap-map = { group = "com.amap.api", name = "3dmap", version.ref = "amapMap" }
+amap-search = { group = "com.amap.api", name = "search", version.ref = "amapSearch" }
 
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxJunit" }

@@ -70,8 +70,8 @@ import androidx.compose.ui.unit.dp
 import io.github.cobylinweiqi.fakeloc.R
 import io.github.cobylinweiqi.fakeloc.core.MapProvider
 import io.github.cobylinweiqi.fakeloc.core.SpoofConfig
-import io.github.cobylinweiqi.fakeloc.ui.map.TencentProbe
-import io.github.cobylinweiqi.fakeloc.ui.map.tencentProbe
+import io.github.cobylinweiqi.fakeloc.ui.map.MapProbe
+import io.github.cobylinweiqi.fakeloc.ui.map.mapProbe
 import kotlinx.coroutines.launch
 import java.security.MessageDigest
 import java.util.Locale
@@ -265,6 +265,16 @@ private val TENCENT_HOWTO = listOf(
     DetailSection(R.string.howto_status_heading, R.string.howto_status_body),
 )
 
+/** Baidu and Amap each need just the one step (get the AK); neither charges a
+ *  separate signing secret, and their quota/status pages are not shared with
+ *  Tencent's. */
+private val BAIDU_HOWTO = listOf(
+    DetailSection(R.string.howto_key_heading, R.string.howto_baidu_body),
+)
+private val AMAP_HOWTO = listOf(
+    DetailSection(R.string.howto_key_heading, R.string.howto_amap_body),
+)
+
 /**
  * A one-line summary plus the essay behind it.
  *
@@ -342,6 +352,7 @@ private fun DetailExpander(
  * specifically, and merging them would bury the one thing the user came to this
  * page to paste.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ProviderCard(
     config: SpoofConfig,
@@ -354,6 +365,29 @@ private fun ProviderCard(
         SectionLabel(stringResource(R.string.settings_provider))
         Spacer(Modifier.height(8.dp))
         Body(stringResource(R.string.settings_provider_desc))
+        Spacer(Modifier.height(10.dp))
+
+        // Which base map the picker draws with. The chip list is the whole point
+        // of this card now: three renderers ship, and this is where the user
+        // picks between them.
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            MapProvider.entries.forEach { option ->
+                FilterChip(
+                    selected = option == provider,
+                    onClick = { onUpdate { it.copy(mapProviderId = option.id) } },
+                    label = { Text(stringResource(providerLabel(option))) },
+                    shape = RoundedCornerShape(10.dp),
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    ),
+                )
+            }
+        }
+
         Spacer(Modifier.height(12.dp))
 
         // State the consequence rather than leaving it to be discovered on a grey
@@ -376,24 +410,29 @@ private fun ProviderCard(
         Spacer(Modifier.height(12.dp))
 
         KeyField(
-            label = stringResource(R.string.settings_key_tencent),
+            label = stringResource(mapKeyLabel(provider)),
             value = config.mapKeyValue(provider),
             onValueChange = { typed -> onUpdate { it.withMapKey(provider, typed) } },
         )
 
-        // Only meaningful for a key with 签名校验 switched on, and harmless
-        // otherwise, so it is always visible rather than hidden behind a switch
-        // the user would have to go and find first. The description says what
-        // happens with it blank, because that is the state most people will
-        // leave it in.
-        Spacer(Modifier.height(12.dp))
-        Body(stringResource(R.string.settings_sk_tencent_desc))
-        Spacer(Modifier.height(8.dp))
-        KeyField(
-            label = stringResource(R.string.settings_sk_tencent),
-            value = config.mapSecretValue(provider),
-            onValueChange = { typed -> onUpdate { it.withMapSecret(provider, typed) } },
-        )
+        // The signing secret only exists on Tencent. Baidu and Amap authenticate
+        // with the AK alone, so the field is hidden for them rather than shown
+        // empty and meaningless.
+        if (config.hasSigningSecret(provider)) {
+            // Only meaningful for a key with 签名校验 switched on, and harmless
+            // otherwise, so it is always visible rather than hidden behind a switch
+            // the user would have to go and find first. The description says what
+            // happens with it blank, because that is the state most people will
+            // leave it in.
+            Spacer(Modifier.height(12.dp))
+            Body(stringResource(R.string.settings_sk_tencent_desc))
+            Spacer(Modifier.height(8.dp))
+            KeyField(
+                label = stringResource(R.string.settings_sk_tencent),
+                value = config.mapSecretValue(provider),
+                onValueChange = { typed -> onUpdate { it.withMapSecret(provider, typed) } },
+            )
+        }
 
         Spacer(Modifier.height(14.dp))
         RowDivider()
@@ -551,7 +590,7 @@ private const val PROBE_LONGITUDE = 116.397500
 private fun ConnectivityTest(config: SpoofConfig, provider: MapProvider) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var result by remember { mutableStateOf<TencentProbe?>(null) }
+    var result by remember { mutableStateOf<MapProbe?>(null) }
     var running by remember { mutableStateOf(false) }
 
     val ready = config.mapKeyConfigured(provider)
@@ -563,8 +602,9 @@ private fun ConnectivityTest(config: SpoofConfig, provider: MapProvider) {
                 running = true
                 result = null
                 scope.launch {
-                    result = tencentProbe(
+                    result = mapProbe(
                         context = context,
+                        provider = provider,
                         apiKey = config.mapKeyValue(provider),
                         secretKey = config.mapSecretValue(provider),
                         latitude = PROBE_LATITUDE,
@@ -585,9 +625,9 @@ private fun ConnectivityTest(config: SpoofConfig, provider: MapProvider) {
         result?.let { probe ->
             Spacer(Modifier.height(8.dp))
             Text(
-                text = probeMessage(probe),
+                text = probeMessage(provider, probe),
                 style = MaterialTheme.typography.bodySmall,
-                color = if (probe is TencentProbe.Ok) {
+                color = if (probe is MapProbe.Ok) {
                     MaterialTheme.colorScheme.primary
                 } else {
                     MaterialTheme.colorScheme.error
@@ -606,18 +646,29 @@ private fun ConnectivityTest(config: SpoofConfig, provider: MapProvider) {
  * telling a user only the number sends them to a search engine instead.
  */
 @Composable
-private fun probeMessage(probe: TencentProbe): String = when (probe) {
-    TencentProbe.Ok -> stringResource(R.string.settings_probe_ok)
-    TencentProbe.NoKey -> stringResource(R.string.settings_probe_no_key)
-    TencentProbe.Unreachable -> stringResource(R.string.settings_probe_unreachable)
-    is TencentProbe.Rejected -> when (probe.status) {
-        111 -> stringResource(R.string.settings_probe_111)
-        110, 112 -> stringResource(R.string.settings_probe_112)
-        113 -> stringResource(R.string.settings_probe_113)
-        199 -> stringResource(R.string.settings_probe_199)
-        120 -> stringResource(R.string.settings_probe_120)
-        190, 301, 311 -> stringResource(R.string.settings_probe_190)
-        else -> stringResource(R.string.settings_probe_other, probe.status)
+private fun probeMessage(provider: MapProvider, probe: MapProbe): String = when (probe) {
+    MapProbe.Ok -> stringResource(R.string.settings_probe_ok)
+    MapProbe.NoKey -> stringResource(R.string.settings_probe_no_key)
+    MapProbe.Unreachable -> stringResource(R.string.settings_probe_unreachable)
+    is MapProbe.Rejected -> when {
+        // Tencent's codes are the ones this build can explain in words; Baidu and
+        // Amap get a generic "the server refused with code N" line because their
+        // code tables are vendor-specific and change with the SDK version.
+        provider == MapProvider.TENCENT -> when (probe.status) {
+            111 -> stringResource(R.string.settings_probe_111)
+            110, 112 -> stringResource(R.string.settings_probe_112)
+            113 -> stringResource(R.string.settings_probe_113)
+            199 -> stringResource(R.string.settings_probe_199)
+            120 -> stringResource(R.string.settings_probe_120)
+            190, 301, 311 -> stringResource(R.string.settings_probe_190)
+            else -> stringResource(R.string.settings_probe_other, probe.status)
+        }
+
+        else -> stringResource(
+            R.string.settings_probe_rejected,
+            stringResource(providerLabel(provider)),
+            probe.status,
+        )
     }
 }
 
@@ -723,8 +774,18 @@ private fun HowToCard(provider: MapProvider, packageName: String) {
             ),
         )
         DetailExpander(
-            title = stringResource(R.string.steps_tencent_title),
-            sections = TENCENT_HOWTO,
+            title = stringResource(
+                when (provider) {
+                    MapProvider.BAIDU -> R.string.steps_baidu_title
+                    MapProvider.TENCENT -> R.string.steps_tencent_title
+                    MapProvider.AMAP -> R.string.steps_amap_title
+                },
+            ),
+            sections = when (provider) {
+                MapProvider.BAIDU -> BAIDU_HOWTO
+                MapProvider.TENCENT -> TENCENT_HOWTO
+                MapProvider.AMAP -> AMAP_HOWTO
+            },
             packageName = packageName,
         )
     }
@@ -1229,7 +1290,16 @@ private fun Body(text: String) {
  * the one place that has to learn about it.
  */
 internal fun providerLabel(provider: MapProvider): Int = when (provider) {
+    MapProvider.BAIDU -> R.string.provider_baidu
     MapProvider.TENCENT -> R.string.provider_tencent
+    MapProvider.AMAP -> R.string.provider_amap
+}
+
+/** Label for the key field, which is named after the platform it belongs to. */
+internal fun mapKeyLabel(provider: MapProvider): Int = when (provider) {
+    MapProvider.BAIDU -> R.string.settings_key_baidu
+    MapProvider.TENCENT -> R.string.settings_key_tencent
+    MapProvider.AMAP -> R.string.settings_key_amap
 }
 
 /**

@@ -60,9 +60,9 @@
     <string name="map_use_this">Use this location</string>
     <string name="map_recenter">Recentre</string>
     <string name="map_center_hint">Drag the map — the pin marks the centre</string>
-    <string name="map_datum_note">The base map is Tencent’s and speaks GCJ-02; the value below is converted to WGS-84 so it matches the box above.</string>
+    <string name="map_datum_note">The base map speaks its own datum (GCJ-02 or BD-09); the value below is converted to WGS-84 so it matches the box above.</string>
     <string name="map_needs_key_title">No %1$s map key</string>
-    <string name="map_needs_key_desc">Tencent has no key yet, so no base map can be drawn. Add one in Settings — that page also shows the package name and SHA-1 the console will ask you for.</string>
+    <string name="map_needs_key_desc">There is no key for this platform yet, so no base map can be drawn. Add one in Settings — that page also shows the package name and SHA-1 the console will ask you for.</string>
     <string name="map_open_settings">Open Settings</string>
     <string name="map_sdk_failed">Map SDK failed to start: %1$s</string>
     <string name="map_sdk_restart">The key changed — restart this app before it takes effect.</string>
@@ -132,7 +132,7 @@
          no key at all (retrying would send the same nothing). -->
     <string name="addr_resolving">Resolving the address…</string>
     <string name="addr_retry">Address not resolved — tap to retry</string>
-    <string name="addr_no_key">Address not resolved — add a Tencent key in Settings to fill it in automatically</string>
+    <string name="addr_no_key">Address not resolved — add the selected map platform’s key in Settings to fill it in automatically</string>
 
     <!-- Scene presets: accuracy, speed and drift are one set of numbers that
          have to agree with each other, and an incoherent mixture is itself a
@@ -177,13 +177,17 @@
     <string name="settings_map_service">Map service</string>
     <string name="settings_map_service_desc">Affects only the picker’s base map and address lookup; the module itself needs no key.</string>
     <!-- The four lines that used to sit on the page, now behind “Learn more”. -->
-    <string name="settings_map_service_detail">The picker draws with Tencent’s base map, and looks addresses up through the system geocoder. The module itself forges positions and needs no map key at all — this page only affects the “pick on a map” screen.</string>
+    <string name="settings_map_service_detail">The picker can draw with Baidu, Tencent or Amap. Pick one under “Base map and key” and paste that platform’s key; the module itself forges positions and needs no map key at all — this page only affects the “pick on a map” screen.</string>
     <string name="settings_provider">Base map and key</string>
-    <string name="settings_provider_desc">This build ships no key of its own — paste your own Tencent key.</string>
-    <string name="settings_provider_ready">Key present — run the test below to see whether Tencent accepts it.</string>
+    <string name="settings_provider_desc">This build ships no key of its own — pick a base map above, then paste the key you registered for it.</string>
+    <string name="settings_provider_ready">Key present — run the test below to see whether the platform accepts it.</string>
     <string name="settings_provider_missing_key">No key yet; the picker will show an empty map until you add one.</string>
     <string name="provider_tencent">Tencent</string>
+    <string name="provider_baidu">Baidu</string>
+    <string name="provider_amap">Amap</string>
     <string name="settings_key_tencent">Tencent Key</string>
+    <string name="settings_key_baidu">Baidu AK</string>
+    <string name="settings_key_amap">Amap Key</string>
     <string name="settings_sk_tencent">Tencent signing secret (SK)</string>
     <string name="settings_sk_tencent_desc">Needed only when that key has key signing switched on: without the matching secret, Tencent rejects every request with status 111. Leave blank otherwise.</string>
     <!-- Connectivity test. Each refusal gets its own sentence because each one
@@ -210,7 +214,7 @@
     <string name="settings_copy">Copy</string>
     <string name="settings_copied">Copied</string>
     <string name="settings_howto">Getting a key and its quota</string>
-    <string name="settings_howto_desc">Four separate gates for %1$s: the key itself, its signing secret, the endpoint quota, and the call source. Skip any one and the key looks valid while doing nothing. Open the steps below.</string>
+    <string name="settings_howto_desc">Everything you need for %1$s: register a key bound to this package name and signing certificate, then paste it into the field above. Open the steps below.</string>
     <string name="steps_tencent_title">Tencent Location · lbs.qq.com</string>
     <string name="howto_key_heading">1 · Get the key</string>
     <string name="howto_key_body">1. Sign in at lbs.qq.com → Console → Application management → My applications → Create application (a mere container, any name) → Add key.\n2. Enable two products on that one key: Android SDK (basemap) and WebService API (reverse geocoding, keyword lookup). Separate entitlements — with Android SDK alone the map draws and the address never resolves.\n3. Android SDK requires a package name and SHA-1: enter %1$s, and copy the SHA-1 from "The two values the console asks for" above.\n4. The whole string shown on the key\'s row after saving is the key; copy it into Tencent Maps key above.</string>
@@ -221,4 +225,14 @@
     <string name="howto_status_heading">4 · What the status codes mean</string>
     <string name="howto_status_body">0 — success\n111 — signature rejected → fill the SK, or turn signing off\n112 / 110 — call source not allowed → clear the allow-list\n113 — this endpoint has no quota → assign it under Quota management\n199 — WebService API not enabled → back to step 1\n190 / 120 — invalid key / daily limit reached</string>
     <string name="settings_privacy_note">Keys stay on this device, in the module’s own preferences, and are sent only to the platform’s own servers by that platform’s SDK.</string>
+    <string name="settings_probe_rejected">%1$s refused · status %2$d</string>
+    <string name="steps_baidu_title">Baidu Maps · lbsyun.baidu.com</string>
+    <string name="steps_amap_title">Amap · lbs.amap.com</string>
+    <string name="howto_baidu_body">1. Sign in at lbsyun.baidu.com → Console → Create application → Add a key for the Android platform.\n2. When asked, enter package name %1$s and copy the SHA-1 from above.\n3. Paste the AK shown for that key into the Baidu field above.</string>
+    <string name="howto_amap_body">1. Sign in at lbs.amap.com → Console → Application management → Create application → Add a key for the Android platform.\n2. When asked, enter package name %1$s and copy the SHA-1 from above.\n3. Enable both 地图SDK and 搜索 (search) for that key, then paste the Key above.</string>
+    <string name="coord_datum_label">Coordinate system of the numbers above</string>
+    <string name="datum_wgs84">WGS-84</string>
+    <string name="datum_gcj02">GCJ-02</string>
+    <string name="datum_bd09">BD-09 (Baidu)</string>
+    <string name="coord_datum_preview">Stored as WGS-84: %1$s, %2$s</string>
 </resources>

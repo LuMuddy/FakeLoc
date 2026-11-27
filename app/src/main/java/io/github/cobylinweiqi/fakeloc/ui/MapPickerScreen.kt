@@ -65,9 +65,8 @@ import io.github.cobylinweiqi.fakeloc.mapsdk.MapSdkBootstrap
 import io.github.cobylinweiqi.fakeloc.ui.map.MapCanvas
 import io.github.cobylinweiqi.fakeloc.ui.map.PICKER_ZOOM
 import io.github.cobylinweiqi.fakeloc.ui.map.SEARCH_ZOOM
-import io.github.cobylinweiqi.fakeloc.ui.map.TencentPlaceHit
-import io.github.cobylinweiqi.fakeloc.ui.map.tencentReverseGeocode
-import io.github.cobylinweiqi.fakeloc.ui.map.tencentSuggestPlaces
+import io.github.cobylinweiqi.fakeloc.ui.map.mapReverseGeocode
+import io.github.cobylinweiqi.fakeloc.ui.map.mapSuggestPlaces
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -99,7 +98,7 @@ private const val MIN_QUERY_LENGTH = 2
  * `adcode` / `city_code` — the two fields the hook side has had getters for
  * since 1.2.2 and no producer for since 1.5.0 removed the Baidu geocoder.
  * `android.location.Geocoder` stays as the fallback, for the devices where the
- * SDK lookup is refused; [tencentReverseGeocode] explains what it replaced and
+ * SDK lookup is refused; [mapReverseGeocode] explains what it replaced and
  * why, [platformReverseGeocode] what it can still supply.
  */
 @Composable
@@ -132,7 +131,7 @@ fun MapPickerScreen(
     // the same keys: it starts a provider at most once per process, and the
     // `remember` means at most once per screen entry.
     val status = remember(provider, mapKey, configured) {
-        if (configured) MapSdkBootstrap.ensure(context, config) else null
+        if (configured) MapSdkBootstrap.ensure(context, provider, mapKey) else null
     }
 
     // A base map that could not build its view at all. Held as the throwable
@@ -228,7 +227,14 @@ fun MapPickerScreen(
         // have a working geocoder of its own; the platform path is tried
         // whenever it produced nothing at all, including the case where it
         // answered but had no administrative name to give.
-        val viaSdk = tencentReverseGeocode(context, lookupKey, lookupSecret, centerLat, centerLng)
+        val viaSdk = mapReverseGeocode(
+            context,
+            provider,
+            lookupKey,
+            lookupSecret,
+            centerLat,
+            centerLng,
+        )
         val picked = if (viaSdk != null && viaSdk.isResolved) {
             viaSdk
         } else {
@@ -259,8 +265,9 @@ fun MapPickerScreen(
         // the lookup failed and an empty list means it succeeded with no
         // matches — the panel says different things about the two, so they are
         // kept apart all the way there.
-        val viaSdk = tencentSuggestPlaces(
+        val viaSdk = mapSuggestPlaces(
             context,
+            provider,
             lookupKey,
             lookupSecret,
             keyword,
@@ -419,7 +426,7 @@ private suspend fun platformSearchPlaces(
 /**
  * Reverse-geocodes a WGS-84 point with the **platform** geocoder.
  *
- * This is the **fallback** behind [tencentReverseGeocode], not the primary path,
+ * This is the **fallback** behind [mapReverseGeocode], not the primary path,
  * and the ordering is not a preference: on a mainland ROM `Geocoder.isPresent()`
  * can be true while every lookup answers with an empty list and no error, which
  * reads from the outside as a module that does nothing. It is kept because it

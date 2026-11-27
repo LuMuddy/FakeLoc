@@ -12,6 +12,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.cobylinweiqi.fakeloc.App
 import io.github.cobylinweiqi.fakeloc.R
+import io.github.cobylinweiqi.fakeloc.core.Coords
+import io.github.cobylinweiqi.fakeloc.core.Datum
 import io.github.cobylinweiqi.fakeloc.core.Geo
 import io.github.cobylinweiqi.fakeloc.core.MapProvider
 import io.github.cobylinweiqi.fakeloc.core.PickedAddress
@@ -25,7 +27,7 @@ import io.github.cobylinweiqi.fakeloc.core.withAnchor
 import io.github.cobylinweiqi.fakeloc.core.withResolvedAddress
 import io.github.cobylinweiqi.fakeloc.data.RemoteStore
 import io.github.cobylinweiqi.fakeloc.mapsdk.MapSdkBootstrap
-import io.github.cobylinweiqi.fakeloc.ui.map.tencentReverseGeocode
+import io.github.cobylinweiqi.fakeloc.ui.map.mapReverseGeocode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -177,7 +179,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * action and deserves a confirmation, whereas presets, paste and "use real
      * GPS" already give their own feedback.
      */
-    fun commitCoordinates(latitudeText: String, longitudeText: String) {
+    fun commitCoordinates(latitudeText: String, longitudeText: String, datum: Datum) {
         val latitude = latitudeText.trim().toDoubleOrNull()
         val longitude = longitudeText.trim().toDoubleOrNull()
         if (latitude == null || longitude == null ||
@@ -186,7 +188,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _messages.tryEmit(R.string.toast_invalid_coords)
             return
         }
-        update { it.moveTo(latitude, longitude) }
+        // The user told us which datum the pair is in; convert to the WGS-84 the
+        // config stores and the hooks inject before adopting it.
+        val (wgsLat, wgsLng) = Coords.toWgs84(latitude, longitude, datum)
+        if (wgsLat !in -90.0..90.0 || wgsLng !in -180.0..180.0) {
+            _messages.tryEmit(R.string.toast_invalid_coords)
+            return
+        }
+        update { it.moveTo(wgsLat, wgsLng) }
         _messages.tryEmit(R.string.toast_saved)
     }
 
@@ -278,13 +287,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _addressState.value = AddressState.SETTLED
             return
         }
-        val key = current.mapKeyFor(MapProvider.TENCENT)
+        val provider = current.mapProvider
+        val key = current.mapKeyFor(provider)
         if (key == null) {
             _addressState.value = AddressState.NO_KEY
             return
         }
 
-        val secret = current.mapSecretValue(MapProvider.TENCENT)
+        val secret = current.mapSecretValue(provider)
         val latitude = current.latitude
         val longitude = current.longitude
 
@@ -296,18 +306,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             // Consent has to be recorded before the SDK will send anything, and
             // it is recorded per process by `MapSdkBootstrap`. The picker calls
             // it on open, which is why a lookup from that screen works and this
-            // one did not: without it `TencentSearch` refuses with
-            // `请确保隐私政策已取得用户同意` — status -1, no request on the wire,
-            // and an address that never arrives (measured 2026-11-12, first run
-            // of this resolver).
-            val ready = MapSdkBootstrap.ensure(getApplication(), current)
+            // one did not: without it the SDK refuses locally with a privacy
+            // complaint — status -1, no request on the wire, and an address that
+            // never arrives.
+            val ready = MapSdkBootstrap.ensure(getApplication(), provider, key)
             if (ready is MapSdkBootstrap.Status.Failed) {
                 _addressState.value = AddressState.FAILED
                 return@launch
             }
 
-            val found = tencentReverseGeocode(
+            val found = mapReverseGeocode(
                 getApplication(),
+                provider,
                 key,
                 secret,
                 latitude,

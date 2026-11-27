@@ -55,6 +55,21 @@ object Coords {
             Datum.BD09 -> wgs84ToBd09(latitude, longitude)
         }
 
+    /**
+     * The inverse of [fromWgs84]: a point in [datum]'s terms, converted back to
+     * WGS-84 — what [SpoofConfig] stores and what the hooks inject.
+     *
+     * Used by every canvas (when the user drags the map) and by the manual
+     * coordinate editor (when the user says the pair they typed is in GCJ-02 or
+     * BD-09). Keeping it here means the datum maths never leaks into a screen.
+     */
+    fun toWgs84(latitude: Double, longitude: Double, datum: Datum): Pair<Double, Double> =
+        when (datum) {
+            Datum.WGS84 -> latitude to longitude
+            Datum.GCJ02 -> gcj02ToWgs84(latitude, longitude)
+            Datum.BD09 -> bd09ToWgs84(latitude, longitude)
+        }
+
     // ------------------------------------------------------------ public API
 
     /** Baidu BD-09 → WGS-84. The inverse of [wgs84ToBd09]. */

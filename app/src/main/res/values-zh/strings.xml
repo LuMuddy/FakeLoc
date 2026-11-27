@@ -57,9 +57,9 @@
     <string name="map_use_this">使用此位置</string>
     <string name="map_recenter">回到原点</string>
     <string name="map_center_hint">拖动地图，图钉所指即所选位置</string>
-    <string name="map_datum_note">底图为腾讯地图，使用 GCJ-02；下方坐标已换算为 WGS-84，与上方坐标框一致。</string>
+    <string name="map_datum_note">底图使用各自的坐标系（GCJ-02 或 BD-09）；下方坐标已换算为 WGS-84，与上方坐标框一致。</string>
     <string name="map_needs_key_title">未配置%1$s地图 Key</string>
-    <string name="map_needs_key_desc">还没有腾讯地图的 Key，无法绘制底图。请在「设置」里填写 —— 设置页同时给出了控制台会索要的包名与 SHA-1。</string>
+    <string name="map_needs_key_desc">该平台还没有 Key，无法绘制底图。请在「设置」里填写 —— 设置页同时给出了控制台会索要的包名与 SHA-1。</string>
     <string name="map_open_settings">打开设置</string>
     <string name="map_sdk_failed">地图 SDK 启动失败：%1$s</string>
     <string name="map_sdk_restart">Key 已更改，重启本应用后生效。</string>
@@ -126,7 +126,7 @@
          正在查、查不到（点一下重试）、压根没配 Key（重试也没用）。 -->
     <string name="addr_resolving">正在解析地址…</string>
     <string name="addr_retry">地址未解析 · 点此重试</string>
-    <string name="addr_no_key">地址未解析 · 设置里填入腾讯 Key 后自动补全</string>
+    <string name="addr_no_key">地址未解析 · 设置里填入所选地图平台的 Key 后自动补全</string>
 
     <!-- 场景预设：精度 / 速度 / 漂移是一组互相牵制的数，凑得不自洽本身就是指纹。 -->
     <string name="section_scene">场景预设</string>
@@ -168,13 +168,17 @@
     <string name="settings_map_service">地图服务</string>
     <string name="settings_map_service_desc">只影响「地图选点」的底图与地址查询，模块本体不需要任何 Key。</string>
     <!-- 原来直接铺在页面上的四行说明，现在收进「了解详情」。 -->
-    <string name="settings_map_service_detail">选点页用腾讯地图作底图，地址查询走系统 Geocoder。模块本体（伪造定位）不需要任何地图 Key —— 这一页只影响「地图选点」。</string>
+    <string name="settings_map_service_detail">选点页可用百度、腾讯或高德地图作底图，在「底图与 Key」里选择并填入对应平台的 Key。模块本体（伪造定位）不需要任何地图 Key —— 这一页只影响「地图选点」。</string>
     <string name="settings_provider">底图与 Key</string>
-    <string name="settings_provider_desc">本安装包不自带任何 Key，请填入你自己的腾讯 Key。</string>
+    <string name="settings_provider_desc">本安装包不自带任何 Key，请选择底图平台并填入你自己的 Key。</string>
     <string name="settings_provider_ready">已填写 Key，能否使用还没验证 —— 点下方「测试连通性」。</string>
     <string name="settings_provider_missing_key">还没有 Key，选点页会是一片空白。</string>
     <string name="provider_tencent">腾讯</string>
+    <string name="provider_baidu">百度</string>
+    <string name="provider_amap">高德</string>
     <string name="settings_key_tencent">腾讯 Key</string>
+    <string name="settings_key_baidu">百度 AK</string>
+    <string name="settings_key_amap">高德 Key</string>
     <string name="settings_sk_tencent">腾讯签名密钥（SK）</string>
     <string name="settings_sk_tencent_desc">仅当该 Key 开启了「签名校验」时才需要填写：不填的话腾讯会以 status 111 拒绝每一次请求。没开就留空。</string>
     <!-- 连通性自检。每种拒绝各写一句，因为每种对应的是不同的修法，
@@ -201,7 +205,7 @@
     <string name="settings_copy">复制</string>
     <string name="settings_copied">已复制</string>
     <string name="settings_howto">如何申请 Key 与额度</string>
-    <string name="settings_howto_desc">「%1$s」要过四道关：Key 本身、SK 签名、接口额度、调用来源。少任何一道，Key 都会「看着有效、实际用不了」。点开逐步看。</string>
+    <string name="settings_howto_desc">接入「%1$s」只需要一件事：申请一把绑定本包名与签名的 Key，填到上方即可。点开查看步骤。</string>
     <string name="steps_tencent_title">腾讯位置服务 · lbs.qq.com</string>
     <string name="howto_key_heading">一、拿到 Key</string>
     <string name="howto_key_body">1. 登录 lbs.qq.com → 控制台 → 应用管理 → 我的应用 → 创建应用（仅是 Key 的容器，名称随意）→ 添加 Key。\n2. 同一把 Key 勾两个产品：Android SDK（底图）与 WebService API（逆地址解析、关键词提示）。两套独立授权，只勾前者会底图能画、地址解析不出。\n3. 勾 Android SDK 要填包名与 SHA-1：包名 %1$s，SHA-1 从上方「控制台会问你要的两个值」复制。\n4. 保存后该 Key 行显示的整串字符就是 Key，复制到上方「腾讯地图 Key」。</string>
@@ -212,4 +216,14 @@
     <string name="howto_status_heading">四、状态码对照</string>
     <string name="howto_status_body">0 —— 成功\n111 —— 签名校验未通过 → 填 SK，或关闭签名校验\n112 / 110 —— 调用来源未放行 → 清空白名单\n113 —— 该接口未分配额度 → 去「配额管理」分配\n199 —— 未启用 WebService API → 回第一步勾上\n190 / 120 —— Key 无效 / 当日额度用尽</string>
     <string name="settings_privacy_note">Key 只保存在本机模块配置里，且仅由对应平台的 SDK 发往该平台自己的服务器。</string>
+    <string name="settings_probe_rejected">%1$s 拒绝 · status %2$d</string>
+    <string name="steps_baidu_title">百度地图 · lbsyun.baidu.com</string>
+    <string name="steps_amap_title">高德地图 · lbs.amap.com</string>
+    <string name="howto_baidu_body">1. 登录 lbsyun.baidu.com → 控制台 → 创建应用 → 为 Android 平台添加 AK。\n2. 按提示填入包名 %1$s，并复制上方的 SHA-1。\n3. 把该 AK 粘贴到上方「百度 AK」。</string>
+    <string name="howto_amap_body">1. 登录 lbs.amap.com → 控制台 → 应用管理 → 创建应用 → 为 Android 平台添加 Key。\n2. 按提示填入包名 %1$s，并复制上方的 SHA-1。\n3. 为该 Key 同时开通「地图SDK」与「搜索」，再把 Key 粘贴到上方「高德 Key」。</string>
+    <string name="coord_datum_label">上方数值的坐标系</string>
+    <string name="datum_wgs84">WGS-84</string>
+    <string name="datum_gcj02">GCJ-02</string>
+    <string name="datum_bd09">BD-09（百度）</string>
+    <string name="coord_datum_preview">将存为 WGS-84：%1$s, %2$s</string>
 </resources>

@@ -19,6 +19,7 @@ import com.tencent.lbssearch.`object`.param.SuggestionParam
 import com.tencent.lbssearch.`object`.result.Geo2AddressResultObject
 import com.tencent.lbssearch.`object`.result.SuggestionResultObject
 import com.tencent.tencentmap.mapsdk.maps.model.LatLng
+import io.github.cobylinweiqi.fakeloc.core.MapProvider
 import io.github.cobylinweiqi.fakeloc.core.PickedAddress
 import io.github.cobylinweiqi.fakeloc.mapsdk.MapSdkBootstrap
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -117,21 +118,6 @@ private const val SUGGESTION_LIMIT = 8
 private const val REGION_ANY = ""
 
 /**
- * One suggestion row, already converted back to WGS-84.
- *
- * Flattened off `SuggestionResultObject.SuggestionData` for the same reason the
- * screen flattens `android.location.Address`: the SDK's row carries an id, a
- * category, a POI type and a distance that nothing renders, and holding it would
- * keep the response object alive through Compose state.
- */
-internal data class TencentPlaceHit(
-    val title: String,
-    val region: String,
-    val latitude: Double,
-    val longitude: Double,
-)
-
-/**
  * Reverse-geocodes a WGS-84 point through the map SDK.
  *
  * Returns `null` when the lookup could not be answered at all — no key, no
@@ -160,29 +146,6 @@ internal suspend fun tencentReverseGeocode(
 }
 
 /**
- * How a connectivity probe ended.
- *
- * The four cases are not decoration — they are the four questions a user asks
- * when the picker draws tiles but resolves no address, and collapsing them into
- * "failed" is what made this take a whole afternoon to diagnose on 2026-09-30.
- * [Rejected] carries Tencent's own status so the UI can name the gate that
- * refused rather than guessing.
- */
-internal sealed interface TencentProbe {
-    /** The key answered and an address came back: everything works. */
-    data object Ok : TencentProbe
-
-    /** No key configured, so nothing was ever sent. Not a failure — a blank. */
-    data object NoKey : TencentProbe
-
-    /** No answer at all: unreachable host, no network, or the timeout fired. */
-    data object Unreachable : TencentProbe
-
-    /** Tencent's gateway answered and refused; [status] is its reason. */
-    data class Rejected(val status: Int) : TencentProbe
-}
-
-/**
  * One `geo2address` round trip, judged as a yes/no on the credential.
  *
  * Fired from the settings page against a fixed point in Beijing rather than the
@@ -195,13 +158,13 @@ internal suspend fun tencentProbe(
     secretKey: String?,
     latitude: Double,
     longitude: Double,
-): TencentProbe {
-    if (apiKey.isNullOrBlank()) return TencentProbe.NoKey
+): MapProbe {
+    if (apiKey.isNullOrBlank()) return MapProbe.NoKey
     val (_, status) = callGeo2Address(context, apiKey, secretKey, latitude, longitude)
     return when {
-        status == STATUS_OK -> TencentProbe.Ok
-        status <= 0 -> TencentProbe.Unreachable
-        else -> TencentProbe.Rejected(status)
+        status == STATUS_OK -> MapProbe.Ok
+        status <= 0 -> MapProbe.Unreachable
+        else -> MapProbe.Rejected(status)
     }
 }
 
@@ -301,7 +264,7 @@ internal suspend fun tencentSuggestPlaces(
     query: String,
     nearLatitude: Double,
     nearLongitude: Double,
-): List<TencentPlaceHit>? = withTimeoutOrNull(LOOKUP_TIMEOUT_MS) {
+): List<MapPlaceHit>? = withTimeoutOrNull(LOOKUP_TIMEOUT_MS) {
     suspendCancellableCoroutine { cont ->
         val (gcjLat, gcjLng) = toGcj02(nearLatitude, nearLongitude)
         val param = SuggestionParam(query, REGION_ANY)
@@ -330,7 +293,7 @@ internal suspend fun tencentSuggestPlaces(
                             // which is the only thing a suggestion is for here.
                             val point = row.latLng ?: return@mapNotNull null
                             val (lat, lng) = gcj02ToWgs84(point.latitude, point.longitude)
-                            TencentPlaceHit(
+                            MapPlaceHit(
                                 title = row.title.orEmpty().ifBlank { row.address.orEmpty() },
                                 region = listOfNotNull(row.province, row.city, row.district)
                                     .filter { it.isNotBlank() }
@@ -384,7 +347,7 @@ internal suspend fun tencentSuggestPlaces(
  * `ensure` call (2026-11-12); this is the single place that covers both.
  */
 private fun newSearch(context: Context, apiKey: String?, secretKey: String?): TencentSearch {
-    MapSdkBootstrap.ensureConsent()
+    MapSdkBootstrap.ensure(context, MapProvider.TENCENT, apiKey)
     return TencentSearch(
         // Application context: the client keeps whatever it is handed, and an
         // Activity here outlives the screen.

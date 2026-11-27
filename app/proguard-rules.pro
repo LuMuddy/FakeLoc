@@ -73,6 +73,24 @@
 -dontwarn com.tencent.**
 -dontwarn com.qq.**
 
+# --- Baidu Map SDK ----------------------------------------------------------
+# Same reasoning as Tencent's block: the map engine and the search clients
+# resolve their own classes by name from native code and from server-supplied
+# strings. `com.baidu.**` covers com.baidu.mapapi, .location, .lbsapi and the
+# search package; `vi.com.**` is Baidu's embedded analytics root.
+-keep class com.baidu.** { *; }
+-keep class vi.com.** { *; }
+-dontwarn com.baidu.**
+-dontwarn vi.com.**
+
+# --- Amap (高德) Map SDK ----------------------------------------------------
+# `com.amap.api` is the public surface; `com.autonavi.**` (mapcore, amap) is the
+# engine the native library calls back into by name.
+-keep class com.amap.api.** { *; }
+-keep class com.autonavi.** { *; }
+-dontwarn com.amap.api.**
+-dontwarn com.autonavi.**
+
 # JNI entry points live in the .so and are matched to Java methods by exact
 # name and signature. Nothing in the dex references them, so without this R8 is
 # free to rename or delete them.

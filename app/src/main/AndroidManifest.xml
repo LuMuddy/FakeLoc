@@ -20,6 +20,13 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <!-- Baidu's and Amap's map engines also read the WiFi state to decide how to
+         stream tiles; neither needs the phone state for a map-only build, so no
+         READ_PHONE_STATE entry is requested. -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+
+    <!-- Both additional map SDKs use the device's density/screen info through
+         normal View APIs and need no extra permission beyond the above. -->
 
     <!-- Needed to list installed apps in the target-picker screen. -->
     <uses-permission
